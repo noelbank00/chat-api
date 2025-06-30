@@ -17,11 +17,11 @@ return new class extends Migration {
             $table->enum('status', ['pending', 'accepted', 'rejected'])->default('pending');
             $table->timestamps();
 
-            $table->unique(['user_id']);
-            $table->unique(['friend_id']);
             $table->unique(['user_id', 'friend_id']);
             $table->index(['user_id', 'status']);
+            $table->index(['user_id']);
             $table->index(['friend_id', 'status']);
+            $table->index(['friend_id']);
         });
     }
 
