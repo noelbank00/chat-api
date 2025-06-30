@@ -2,21 +2,27 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Enums\FriendshipStatusEnum;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SendFriendRequestRequest;
 use App\Models\Friendship;
+use App\Models\User;
+use App\Services\FriendshipService;
 use Illuminate\Http\JsonResponse;
 
 class FriendshipController extends Controller
 {
+    public function __construct(
+        private readonly FriendshipService $friendshipService
+    ) {
+    }
+
     public function sendRequest(SendFriendRequestRequest $request): JsonResponse
     {
-        $friendship = Friendship::query()->create([
-            'user_id' => auth()->id(),
-            'friend_id' => $request->validated('friend_id'),
-            'status' => 'pending',
-        ]);
+        /** @var User $sender */
+        $sender = auth()->user();
+        $receiver = User::query()->findOrFail($request->validated('friend_id'));
+
+        $friendship = $this->friendshipService->sendFriendRequest($sender, $receiver);
 
         return response()->json([
             'message' => 'Friend request sent successfully.',
@@ -26,19 +32,16 @@ class FriendshipController extends Controller
 
     public function acceptRequest(Friendship $friendship): JsonResponse
     {
-        if ($friendship->friend_id !== auth()->id()) {
+        /** @var User $user */
+        $user = auth()->user();
+
+        if (!$this->friendshipService->canAcceptRequest($user, $friendship)) {
             return response()->json([
-                'message' => 'You can only accept friend requests sent to you.'
+                'message' => 'You can only accept pending friend requests sent to you.'
             ], 403);
         }
 
-        if ($friendship->status !== FriendshipStatusEnum::Pending) {
-            return response()->json([
-                'message' => 'Friend request is not pending.'
-            ], 400);
-        }
-
-        $friendship->update(['status' => FriendshipStatusEnum::Accepted]);
+        $this->friendshipService->acceptFriendRequest($friendship);
 
         return response()->json([
             'message' => 'Friend request accepted.',
@@ -48,19 +51,16 @@ class FriendshipController extends Controller
 
     public function rejectRequest(Friendship $friendship): JsonResponse
     {
-        if ($friendship->friend_id !== auth()->id()) {
+        /** @var User $user */
+        $user = auth()->user();
+
+        if (!$this->friendshipService->canRejectRequest($user, $friendship)) {
             return response()->json([
-                'message' => 'You can only reject friend requests sent to you.'
+                'message' => 'You can only reject pending friend requests sent to you.'
             ], 403);
         }
 
-        if ($friendship->status !== FriendshipStatusEnum::Pending) {
-            return response()->json([
-                'message' => 'Friend request is not pending.'
-            ], 400);
-        }
-
-        $friendship->update(['status' => FriendshipStatusEnum::Rejected]);
+        $this->friendshipService->rejectFriendRequest($friendship);
 
         return response()->json([
             'message' => 'Friend request rejected.',
@@ -70,8 +70,9 @@ class FriendshipController extends Controller
 
     public function friends(): JsonResponse
     {
+        /** @var User $user */
         $user = auth()->user();
-        $friends = $user->allFriends();
+        $friends = $this->friendshipService->getFriends($user);
 
         return response()->json([
             'friends' => $friends,
@@ -80,10 +81,9 @@ class FriendshipController extends Controller
 
     public function pendingRequests(): JsonResponse
     {
-        $pendingRequests = auth()->user()
-            ->pendingFriendRequests()
-            ->with('user')
-            ->get();
+        /** @var User $user */
+        $user = auth()->user();
+        $pendingRequests = $this->friendshipService->getPendingRequests($user);
 
         return response()->json([
             'pending_requests' => $pendingRequests,
@@ -92,19 +92,16 @@ class FriendshipController extends Controller
 
     public function removeFriend(Friendship $friendship): JsonResponse
     {
-        if ($friendship->user_id !== auth()->id() && $friendship->friend_id !== auth()->id()) {
+        /** @var User $user */
+        $user = auth()->user();
+
+        if (!$this->friendshipService->canRemoveFriendship($user, $friendship)) {
             return response()->json([
-                'message' => 'You can only remove friendships you are part of.'
+                'message' => 'You can only remove accepted friendships you are part of.'
             ], 403);
         }
 
-        if ($friendship->status !== FriendshipStatusEnum::Accepted) {
-            return response()->json([
-                'message' => 'You can only remove accepted friendships.'
-            ], 400);
-        }
-
-        $friendship->delete();
+        $this->friendshipService->removeFriendship($friendship);
 
         return response()->json([
             'message' => 'Friendship removed successfully.',
