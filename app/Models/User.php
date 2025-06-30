@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\FriendshipStatusEnum;
 use Database\Factories\UserFactory;
 use Eloquent;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -121,14 +122,14 @@ class User extends Authenticatable implements MustVerifyEmail
     public function friends(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'friendships', 'user_id', 'friend_id')
-            ->wherePivot('status', 'accepted')
+            ->wherePivot('status', FriendshipStatusEnum::Accepted)
             ->withTimestamps();
     }
 
     public function friendsOf(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'friendships', 'friend_id', 'user_id')
-            ->wherePivot('status', 'accepted')
+            ->wherePivot('status', FriendshipStatusEnum::Accepted)
             ->withTimestamps();
     }
 
@@ -139,19 +140,19 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function pendingFriendRequests(): HasMany
     {
-        return $this->receivedFriendRequests()->where('status', 'pending');
+        return $this->receivedFriendRequests()->where('status', FriendshipStatusEnum::Pending);
     }
 
     public function hasFriendship($userId): bool
     {
         return $this->sentFriendRequests()
                 ->where('friend_id', $userId)
-                ->whereIn('status', ['pending', 'accepted'])
+                ->whereIn('status', [FriendshipStatusEnum::Pending, FriendshipStatusEnum::Accepted])
                 ->exists()
             ||
             $this->receivedFriendRequests()
                 ->where('user_id', $userId)
-                ->whereIn('status', ['pending', 'accepted'])
+                ->whereIn('status', [FriendshipStatusEnum::Pending, FriendshipStatusEnum::Accepted])
                 ->exists();
     }
 
@@ -159,12 +160,12 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->sentFriendRequests()
                 ->where('friend_id', $userId)
-                ->where('status', 'accepted')
+                ->where('status', FriendshipStatusEnum::Accepted)
                 ->exists()
             ||
             $this->receivedFriendRequests()
                 ->where('user_id', $userId)
-                ->where('status', 'accepted')
+                ->where('status', FriendshipStatusEnum::Accepted)
                 ->exists();
     }
 }

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\FriendshipController;
+use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -27,5 +28,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('accept/{friendship}', [FriendshipController::class, 'acceptRequest']);
         Route::post('reject/{friendship}', [FriendshipController::class, 'rejectRequest']);
         Route::delete('remove/{friendship}', [FriendshipController::class, 'removeFriend']);
+    });
+    
+    Route::prefix('messages')->group(function () {
+        Route::post('/', [MessageController::class, 'sendMessage']);
+        Route::get('{partner}', [MessageController::class, 'getMessages']);
     });
 });
