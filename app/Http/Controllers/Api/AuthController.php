@@ -22,13 +22,13 @@ class AuthController extends Controller
     public function login(LoginRequest $request): JsonResponse
     {
         $result = $request->authenticate();
-        
+
         if ($result === 'email_not_verified') {
             return response()->json([
                 'message' => 'Please verify your email address before logging in.'
             ], 403);
         }
-        
+
         if (is_null($result)) {
             return response()->json([
                 'message' => 'Invalid credentials.'
@@ -39,6 +39,11 @@ class AuthController extends Controller
             'chat-api-token',
             ['*']
         )->plainTextToken;
+
+        $result->update([
+            'is_active' => true,
+            'last_activity_at' => now(),
+        ]);
 
         return response()->json([
             'token' => $token,
@@ -59,9 +64,19 @@ class AuthController extends Controller
         ]);
     }
 
-    public function logout()
+    /**
+     * @return JsonResponse
+     */
+    public function logout(): JsonResponse
     {
-        auth()->logout();
+        /** @var User $user */
+        $user = auth()->user();
+
+        if ($user) {
+            $user->update(['is_active' => false]);
+            $user->currentAccessToken()->delete();
+            auth()->logout();
+        }
 
         return response()->json(['message' => 'Logged out successfully.']);
     }
@@ -71,7 +86,7 @@ class AuthController extends Controller
         /** @var User $user */
         $user = User::query()->find($request->route('id'));
 
-        if (!$user || !hash_equals(sha1($user->getEmailForVerification()), (string) $request->route('hash'))) {
+        if (!$user || !hash_equals(sha1($user->getEmailForVerification()), (string)$request->route('hash'))) {
             return response()->json(['message' => 'Invalid verification link.'], 400);
         }
 
