@@ -45,7 +45,6 @@ class MessageController extends Controller
         }
 
         $messages = $this->messageService->getMessagesBetweenUsers($authUser, $partner);
-        $this->messageService->markMessagesAsRead($partner, $authUser);
 
         return response()->json([
             'messages' => $messages,

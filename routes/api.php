@@ -20,18 +20,18 @@ Route::post('/email/verification-notification', [AuthController::class, 'resendV
     ->name('verification.send');
 
 Route::middleware(['auth:sanctum'])->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/users', UserController::class);
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::get('/users', UserController::class)->name('users.index');
 
-    Route::prefix('friendships')->group(function () {
-        Route::post('/', [FriendshipController::class, 'sendRequest']);
-        Route::post('accept/{friendship}', [FriendshipController::class, 'acceptRequest']);
-        Route::post('reject/{friendship}', [FriendshipController::class, 'rejectRequest']);
-        Route::delete('remove/{friendship}', [FriendshipController::class, 'removeFriend']);
+    Route::prefix('friendships')->name('friendships.')->group(function () {
+        Route::post('/', [FriendshipController::class, 'sendRequest'])->name('send');
+        Route::post('accept/{friendship}', [FriendshipController::class, 'acceptRequest'])->name('accept');
+        Route::post('reject/{friendship}', [FriendshipController::class, 'rejectRequest'])->name('reject');
+        Route::delete('remove/{friendship}', [FriendshipController::class, 'removeFriend'])->name('remove');
     });
     
-    Route::prefix('messages')->group(function () {
-        Route::post('/', [MessageController::class, 'sendMessage']);
-        Route::get('{partner}', [MessageController::class, 'getMessages']);
+    Route::prefix('messages')->name('messages.')->group(function () {
+        Route::post('/', [MessageController::class, 'sendMessage'])->name('send');
+        Route::get('{partner}', [MessageController::class, 'getMessages'])->name('show');
     });
 });
